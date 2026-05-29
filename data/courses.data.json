@@ -1,0 +1,24 @@
+{
+    "data": [
+        {
+            "searchTerm": "carpentry",
+            "code": "CPC30220-01"
+        },
+        {
+            "searchTerm": "electrician",
+            "code": "UEE30820-01"
+        },
+        {
+            "searchTerm": "nursing",
+            "code": "HLT54121-01"
+        },
+        {
+            "searchTerm": "cyber security",
+            "code": "22603VIC-01"
+        },
+        {
+            "searchTerm": "individual support",
+            "code": "CHC33021-02"
+        }
+    ]
+}
