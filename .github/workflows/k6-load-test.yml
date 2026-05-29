@@ -35,6 +35,10 @@ jobs:
           sudo apt-get install k6
 
       - name: Run k6 test
+        # Render the HTML report's timestamp in Australian Eastern time (AEST/AEDT).
+        # The test's own date logic uses explicit UTC, so it is unaffected by TZ.
+        env:
+          TZ: Australia/Sydney
         run: |
           mkdir -p results
           k6 run tests/api.tests.js
