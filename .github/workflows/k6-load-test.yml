@@ -1,0 +1,82 @@
+name: k6 Load Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Allow this workflow to publish the HTML report to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deployment at a time
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  load-test:
+    name: Run k6 load test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Run k6 test
+        run: |
+          mkdir -p results
+          k6 run tests/api.tests.js
+        # Keep going so the report is still published even if thresholds fail
+        continue-on-error: true
+
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-html-report
+          path: results/
+
+      - name: Add summary link to the run
+        if: always()
+        run: |
+          echo "### k6 Load Test complete :rocket:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Download the HTML report from the **Artifacts** section of this run (\`k6-html-report\`)." >> "$GITHUB_STEP_SUMMARY"
+          echo "- View the latest report online on **GitHub Pages** (see the \`deploy\` job below)." >> "$GITHUB_STEP_SUMMARY"
+
+      # Prepare the HTML report for Pages: serve result.html as index.html
+      - name: Prepare Pages content
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p public
+          cp results/result.html public/index.html
+
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    name: Publish report to GitHub Pages
+    if: github.ref == 'refs/heads/main'
+    needs: load-test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
